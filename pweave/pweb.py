@@ -25,6 +25,7 @@ class Pweb(object):
     :param figdir: ``string`` figure directory
     :param mimetype: Source document's text mimetype. This is used to set cell
                      type in Jupyter notebooks
+    :param mimetype: ``bool`` whether to immediately exit on unsuppressed error
     """
 
     def __init__(
@@ -36,7 +37,8 @@ class Pweb(object):
         kernel="python3",
         output=None,
         figdir="figures",
-        mimetype=None
+        mimetype=None,
+        exitonerror=False,
     ):
         self.source = source
         name, ext = os.path.splitext(os.path.basename(source))
@@ -47,6 +49,7 @@ class Pweb(object):
         self.sink = None
         self.kernel = None
         self.language = None
+        self.exitonerror = exitonerror
 
         if mimetype is None:
             self.mimetype = MimeTypes.guess_mimetype(self.source)
@@ -133,6 +136,7 @@ class Pweb(object):
             self.documentationmode,
             self.figdir,
             self.wd,
+            self.exitonerror,
         )
         proc.run()
         self.executed = proc.getresults()
@@ -173,9 +177,6 @@ class Pweb(object):
         self.formatter.format()
         self.formatted = self.formatter.getformatted()
 
-        if self.formatter.exceptions:
-            raise PwebError(exceptions=self.formatter.exceptions)
-
     def setsink(self):
         if self.output is not None:
             self.sink = self.output
@@ -209,6 +210,9 @@ class Pweb(object):
         self.run()
         self.format()
         self.write()
+
+        if self.formatter.exceptions:
+            raise PwebError(exceptions=self.formatter.exceptions)
 
     def tangle(self):
         """Tangle the document"""

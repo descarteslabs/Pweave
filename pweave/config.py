@@ -1,3 +1,5 @@
+import re
+
 rcParams = {
     "cachedir": "cache",
     "figdir": "figures",
@@ -39,7 +41,12 @@ class PwebProcessorGlobals(object):
 
 
 class PwebError(Exception):
+    ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
+
     def __init__(self, exceptions=None):
-        self.exceptions = exceptions or []
-        self.exceptions.insert(0, "Found exceptions while evaluating code blocks:")
-        super().__init__("\n".join(self.exceptions))
+        self.exceptions = ["Found exceptions while evaluating code blocks:"]
+        self.exceptions.extend(exceptions or ["Strange, no exceptions found?"])
+
+        super().__init__(
+            "\n".join([self.ansi_escape.sub("", exc) for exc in self.exceptions])
+        )

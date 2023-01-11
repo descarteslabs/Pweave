@@ -99,6 +99,14 @@ def weave():
         help="Source document's text mimetype. This is used to set cell "
         + "type in Jupyter notebooks",
     )
+    parser.add_option(
+        "-e",
+        "--exit_on_error",
+        dest="exitonerror",
+        action="store_true",
+        default=False,
+        help="Return an error if any of the code raises an exception without it being suppressed.",
+    )
 
     (options, args) = parser.parse_args()
 

@@ -17,10 +17,10 @@ class JupyterProcessor(PwebProcessorBase):
     """Generic Jupyter processor, should work with any kernel"""
 
     def __init__(
-        self, parsed, kernel, source, mode, figdir, outdir, embed_kernel=False
+        self, parsed, kernel, source, mode, figdir, outdir, exitonerror, embed_kernel=False
     ):
         super(JupyterProcessor, self).__init__(
-            parsed, kernel, source, mode, figdir, outdir
+            parsed, kernel, source, mode, figdir, outdir, exitonerror
         )
 
         self.extra_arguments = None
@@ -203,7 +203,6 @@ class IPythonProcessor(JupyterProcessor):
                 code_str = splitter.source
                 sources.append(code_str)
                 out = self.loadstring(code_str)
-                # print(out)
                 outputs.append(out)
                 splitter.reset()
                 splitter.push(line)

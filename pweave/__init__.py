@@ -28,6 +28,7 @@ def weave(
     listformats=False,
     output=None,
     mimetype=None,
+    exitonerror=False,
 ):
     """
     Processes a Pweave document and writes output to a file
@@ -46,6 +47,7 @@ def weave(
     :param output: ``string`` output file
     :param mimetype: ``string`` Source document's text mimetype. This is used to set cell
                                 type in Jupyter notebooks.
+    :param exitonerror: ``bool`` Exit immdediately if an unsuppressed error is encountered.
     """
 
     if listformats:
@@ -65,6 +67,7 @@ def weave(
         output=output,
         figdir=figdir,
         mimetype=mimetype,
+        exitonerror=exitonerror,
     )
     doc.documentationmode = docmode
 

@@ -1,7 +1,6 @@
 import base64
 import copy
 import os
-import re
 import textwrap
 
 from nbconvert import filters
@@ -136,15 +135,9 @@ class PwebFormatter(object):
     def render_jupyter_output(self, out, chunk):
         if out["output_type"] == "error":
             if not chunk["allow_exceptions"]:
-                ansi_escape = re.compile(r"(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]")
-                lines = []
+                self.exceptions.append("\n".join(out["traceback"]))
 
-                for line in out["traceback"]:
-                    lines.append(ansi_escape.sub("", line))
-
-                self.exceptions.append("\n".join(lines))
-
-            return self.render_traceback("".join(out["traceback"]), chunk)
+            return self.render_traceback("\n".join(out["traceback"]), chunk)
 
         if out["output_type"] == "stream":
             return self.render_text(out["text"], chunk)

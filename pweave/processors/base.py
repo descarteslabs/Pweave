@@ -6,19 +6,20 @@ import pickle
 import re
 import sys
 
-from ..config import rcParams
+from ..config import rcParams, PwebError
 
 
 class PwebProcessorBase(object):
     """Processors run code from parsed Pweave documents. This is an abstract base
     class for specific implementations"""
 
-    def __init__(self, parsed, kernel, source, docmode, figdir, outdir):
+    def __init__(self, parsed, kernel, source, docmode, figdir, outdir, exitonerror):
         self.parsed = parsed
         self.source = source
         self.documentationmode = docmode
         self.figdir = figdir
         self.outdir = outdir
+        self.exitonerror = exitonerror
         self.executed = []
 
         self.cwd = os.path.dirname(os.path.abspath(source))
@@ -28,6 +29,7 @@ class PwebProcessorBase(object):
     def run(self):
         # Create directory for figures
         self.ensureDirectoryExists(self.getFigDirectory())
+
         # Documentation mode uses results from previous  executions
         # so that compilation is fast if you only work on doc chunks
         if self.documentationmode:
@@ -46,12 +48,7 @@ class PwebProcessorBase(object):
 
         # Term chunk returns a list of dicts, this flattens the results
         for chunk in self.parsed:
-            res = self._runcode(chunk)
-
-            if isinstance(res, list):
-                self.executed = self.executed + res
-            else:
-                self.executed.append(res)
+            self.executed.extend(self._runcode(chunk))
 
         self.isexecuted = True
 
@@ -97,7 +94,7 @@ class PwebProcessorBase(object):
     def _runcode(self, chunk):
         """Execute code from a code chunk based on options"""
         if chunk["type"] != "doc" and chunk["type"] != "code":
-            return chunk
+            return [chunk]
 
         # Add defaultoptions to parsed options
         if chunk["type"] == "code":
@@ -133,7 +130,7 @@ class PwebProcessorBase(object):
 
         if chunk["type"] == "doc":
             chunk["content"] = self.loadinline(chunk["content"])
-            return chunk
+            return [chunk]
 
         if chunk["type"] == "code":
             sys.stdout.write(
@@ -146,7 +143,7 @@ class PwebProcessorBase(object):
             if not chunk["complete"]:
                 self.pending_code += chunk["content"]
                 chunk["result"] = ""
-                return chunk
+                return [chunk]
             elif self.pending_code != "":
                 old_content = chunk["content"]
                 chunk["content"] = (
@@ -156,7 +153,7 @@ class PwebProcessorBase(object):
 
             if not chunk["evaluate"]:
                 chunk["result"] = ""
-                return chunk
+                return [chunk]
 
             self.pre_run_hook(chunk)
 
@@ -196,6 +193,7 @@ class PwebProcessorBase(object):
                         chunk["content"], chunk=chunk
                     )
 
+                self.post_run_hook(chunks)
                 return chunks
             else:
                 chunk["result"] = self.loadstring(chunk["content"], chunk=chunk)
@@ -207,11 +205,20 @@ class PwebProcessorBase(object):
         if old_content is not None:
             chunk["content"] = old_content  # The code from current chunk for display
 
-        self.post_run_hook(chunk)
-        return chunk
+        self.post_run_hook([chunk])
+        return [chunk]
 
-    def post_run_hook(self, chunk):
-        pass
+    def post_run_hook(self, chunks):
+        if self.exitonerror:
+            exceptions = []
+
+            for chunk in chunks:
+                for out in chunk.get("result", []):
+                    if out["output_type"] == "error" and not chunk["allow_exceptions"]:
+                        exceptions.append("\n".join(out["traceback"]))
+
+            if exceptions:
+                raise PwebError(exceptions)
 
     def pre_run_hook(self, chunk):
         pass
