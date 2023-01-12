@@ -114,7 +114,6 @@ class PwebFormatter(object):
                     i += 1
                     break
 
-        # print(figs)
         return figs
 
     def format_termchunk(self, chunk):

@@ -37,7 +37,7 @@ class JupyterProcessor(PwebProcessorBase):
         kc.start_channels()
 
         try:
-            kc.wait_for_ready()
+            kc.wait_for_ready()  # This seems to print "status"?
         except RuntimeError:
             print(
                 "Timeout from starting kernel\nTry restarting python session and running weave again"

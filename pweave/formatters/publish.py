@@ -141,7 +141,10 @@ class PwebMDtoHTMLFormatter(PwebHTMLFormatter):
         try:
             import markdown
         except ImportError:
-            message = "You'll need to install python markdown in order to use markdown to html formatter\nrun 'pip install markdown' to install"
+            message = (
+                "You'll need to install python markdown in order to use markdown to "
+                "html formatter\nrun 'pip install markdown' to install"
+            )
             print(message)
             return message  # was returning None, which was passed to join method
 

@@ -139,16 +139,18 @@ class PwebProcessorBase(object):
             )
 
             old_content = None
+            last_chunk = None
+            saved_display_data = []
+            last_display_data = []
 
             if not chunk["complete"]:
                 self.pending_code += chunk["content"]
                 chunk["result"] = ""
                 return [chunk]
             elif self.pending_code != "":
+                # Code from all pending chunks for running the code
                 old_content = chunk["content"]
-                chunk["content"] = (
-                    self.pending_code + old_content
-                )  # Code from all pending chunks for running the code
+                chunk["content"] = self.pending_code + old_content
                 self.pending_code = ""
 
             if not chunk["evaluate"]:
@@ -159,39 +161,49 @@ class PwebProcessorBase(object):
 
             if chunk["term"]:
                 # Running in term mode can return a list of chunks.
-                # For backwards compatibility, we mark all chunks but the last one
-                # as incomplete so we can later decide whether to show intermediate
-                # figures. Also, we make sure that the last chunk always contains the
-                # result of the full original chunk.
+                # For backwards compatibility with figures, we mark all chunks but the
+                # last one as incomplete so we can later decide whether to show
+                # intermediate figures. Also, we make sure that the last chunk always
+                # contains all figure data if we don't show intermediate figures.
                 chunks = []
                 sources, results = self.loadterm(chunk["content"], chunk=chunk)
                 n = len(sources)
                 content = ""
 
                 for i in range(n):
+                    saved_display_data.extend(last_display_data)
+                    last_display_data.clear()
+
                     if len(results[i]) == 0:
                         content += sources[i]
                     else:
-                        new_chunk = chunk.copy()
-                        new_chunk["content"] = content + sources[i].rstrip()
+                        last_chunk = chunk.copy()
+                        last_chunk["content"] = content + sources[i].rstrip()
+                        last_chunk["result"] = results[i]
+                        last_chunk["complete"] = False
+                        chunks.append(last_chunk)
+
                         content = ""
-                        new_chunk["result"] = results[i]
-                        new_chunk["complete"] = False
-                        chunks.append(new_chunk)
+
+                        for out in results[i]:
+                            if out["output_type"] == "display_data":
+                                last_display_data.append(out)
 
                 # Deal with not output, #73
-                # Always mark the last chunk as complete and with the final result
                 if len(content) > 0:
-                    new_chunk = chunk.copy()
-                    new_chunk["content"] = content
-                    new_chunk["result"] = self.loadstring(chunk["content"], chunk=chunk)
-                    new_chunk["complete"] = True
-                    chunks.append(new_chunk)
-                else:
-                    chunks[-1]["complete"] = True
-                    chunks[-1]["result"] = self.loadstring(
-                        chunk["content"], chunk=chunk
-                    )
+                    last_chunk = chunk.copy()
+                    last_chunk["content"] = content
+                    last_chunk["result"] = []
+                    chunks.append(last_chunk)
+
+                if last_chunk:
+                    if not chunk["multi_fig"]:
+                        # Add all image data to the last chunk
+                        last_chunk["result"] = saved_display_data + last_chunk["result"]
+
+                    # Always mark the last chunk as complete
+                    last_chunk["content"] = chunk["content"]
+                    last_chunk["complete"] = True
 
                 self.post_run_hook(chunks)
                 return chunks
