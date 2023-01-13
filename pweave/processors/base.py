@@ -186,6 +186,12 @@ class PwebProcessorBase(object):
                         content = ""
 
                         for out in results[i]:
+                            if (
+                                out["output_type"] == "error"
+                                and out["ename"] == "KeyboardInterrupt"
+                            ):
+                                raise KeyboardInterrupt()
+
                             if out["output_type"] == "display_data":
                                 last_display_data.append(out)
 
@@ -202,7 +208,6 @@ class PwebProcessorBase(object):
                         last_chunk["result"] = saved_display_data + last_chunk["result"]
 
                     # Always mark the last chunk as complete
-                    last_chunk["content"] = chunk["content"]
                     last_chunk["complete"] = True
 
                 self.post_run_hook(chunks)
